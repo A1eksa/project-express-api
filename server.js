@@ -2,33 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import listEndpoints from 'express-list-endpoints';
-// import techFundings from './data/tech_fundings.json';
 import booksData from './data/books.json';
 
-// const data = require('./data/tech_fundings.json');
-
-// If you're using one of our datasets, uncomment the appropriate import below
-// to get started!
-//
-// import goldenGlobesData from './data/golden-globes.json'
-// import avocadoSalesData from './data/avocado-sales.json'
-// import booksData from './data/books.json'
-// import netflixData from './data/netflix-titles.json'
-// import topMusicData from './data/top-music.json'
-
-// Defines the port the app will run on. Defaults to 8080, but can be
-// overridden when starting the server. For example:
-//
 //   PORT=9000 npm start
 const port = process.env.PORT || 8080;
 const app = express();
-
-// const users = [
-//   { id: 1, name: 'Alice', age: 33 },
-//   { id: 2, name: 'Bob', age: 23 },
-//   { id: 3, name: 'Chris', age: 3 },
-//   { id: 4, name: 'Daniela', age: 67 },
-// ];
 
 // Add middlewares to enable cors and json body parsing
 app.use(cors());
@@ -38,7 +16,9 @@ app.get('/', (req, res) => {
   const apiGuide = {
     Endpoints: [
       {
-        '/books------------------------->': 'Get all books',
+        '/books?page=1&limit=10--------->': 'Get first 10 books',
+        '/books?title=title------------->': 'Get books by title',
+        '/books?author=author----------->': 'Get books by author',
         '/books/id/--------------------->': 'Get book by Id',
         '/books/isbn/:isbn-------------->': 'Get book by isbn number',
         '/books/language_code/:spa------>': 'Get books in spanish language',
@@ -54,8 +34,53 @@ app.get('/', (req, res) => {
 //   res.json(booksData);
 // });
 
+//endpoint that gives you all books but paginated-limit 10 per page
 app.get('/books', (req, res) => {
-  res.json(booksData);
+  const { title, author } = req.query;
+
+  let booksToShow = booksData;
+
+  if (title) {
+    booksToShow = booksToShow.filter(
+      (item) => item.title.toLowerCase().indexOf(title.toLowerCase()) !== -1
+    );
+  }
+  if (author) {
+    booksToShow = booksToShow.filter(
+      (item) => item.authors.toLowerCase().indexOf(author.toLowerCase()) !== -1
+    );
+  }
+
+  res.json({
+    response: booksToShow,
+    success: true,
+  });
+
+  const page = parseInt(req.query.page);
+  const limit = parseInt(req.query.limit);
+  console.log({ limit });
+  console.log(req.query);
+
+  const startIndex = (page - 1) * limit;
+  const endIndex = page * limit;
+
+  const results = {};
+
+  results.next = {
+    page: page + 1,
+    limit: limit,
+  };
+
+  if (startIndex > 0) {
+    results.previous = {
+      page: page - 1,
+      limit: limit,
+    };
+  }
+
+  results.results = booksData.slice(startIndex, endIndex);
+  console.log(results);
+  res.json(results);
 });
 
 app.get('/books/id/:id', (req, res) => {
@@ -88,7 +113,7 @@ app.get('/books/language_code/:spa', (req, res) => {
     res.json(spaBooks);
   }
 });
-//endpoint for books in english -made a paginated api here
+//endpoint for books in english
 app.get('/books/language_code/:eng', (req, res) => {
   const eng = req.params.eng;
   const engBooks = booksData.filter((item) => item.language_code === eng);
@@ -112,67 +137,6 @@ app.get('/books/num_pages/:num_pages', (req, res) => {
     res.json(numberOfPAges);
   }
 });
-
-// app.get('/books/language_code/:en-us', (req, res) => {
-//   const us = req.params.us;
-//   const usBooks = booksData.filter((item) => item.language_code === us);
-//   if (!usBooks) {
-//     res.status(404).send('No book found with english language');
-//   } else {
-//     res.json(usBooks);
-//   }
-// });
-
-// app.get('/fundings', (req, res) => {
-//   const { company } = req.query;
-
-//   //stala na maks predavanju na 01:14
-
-//   let techFundingsToSend = techFundings;
-
-//   if (company) {
-//     const filteredFundings = techFundings.filter(
-//       (item) => item.Company.toLowerCase().indexOf(company.toLowerCase()) !== -1
-//     );
-//     res.json({
-//       response: filteredFundings,
-//       success: true,
-//     });
-//   }
-
-//   res.json({
-//     response: techFundings,
-//     success: true, ///gives the whole list back
-//   });
-// });
-
-// app.get('/fundings/id/:id', (req, res) => {
-//   const { id } = req.params;
-//   const companyId = techFundings.find((company) => company.index === +id);
-//   if (!companyId) {
-//     res.status(404).send('No company found with that Id!');
-//   } else {
-//     res.json(companyId);
-//   }
-// });
-
-// app.get('/fundings/company/:company', (req, res) => {
-//   const { company } = req.params;
-
-//   const companyByName = techFundings.find((item) => item.Company === company);
-
-//   if (!companyByName) {
-//     res.status(404).json({
-//       response: 'No company found with that name',
-//       success: false,
-//     });
-//   } else {
-//     res.status(200).json({
-//       response: companyByName,
-//       success: true,
-//     });
-//   }
-// });
 
 // Start the server
 app.listen(port, () => {
